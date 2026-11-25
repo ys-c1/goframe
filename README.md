@@ -13,3 +13,11 @@
 make test
 go run ./cmd/goframe run --frames 20 --bodies 8 --substeps 4 --gravity 2
 ```
+
+斜抛误差实验会生成三档角度（水平、45°、竖直）的对照表与两张轨迹图：
+
+```
+make projectile
+```
+
+产物位于 `artifacts/projectile_*` 与 `artifacts/trajectory-{before,after}.png`，结论见 `artifacts/PROJECTILE_REPORT.md`。

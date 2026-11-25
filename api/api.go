@@ -12,17 +12,18 @@ import (
 
 // Options 是可配参数的唯一入口，新增参数必须加在这里并注明默认值。
 type Options struct {
-	Bodies   int  // 实体数，默认 8
-	SubSteps int  // 每帧子步数，默认 1
-	Gravity  int  // 重力，Q16.16 的整数值，默认 0
+	Bodies     int // 实体数，默认 8
+	SubSteps   int // 每帧子步数，默认 1
+	Gravity    int // 重力，Q16.16 的整数值，默认 0
+	FrameDTQ16 int // 一帧时长的 Q16.16 raw；0 表示 1.0 个帧单位
 }
 
 // Command 是一帧内要执行的指令。
 type Command struct {
-	Tick   int // 生效帧号
-	Body   int // 目标实体
-	PushX  int // 冲量，Q16.16 整数表示
-	PushY  int
+	Tick  int // 生效帧号
+	Body  int // 目标实体
+	PushX int // 冲量，Q16.16 整数表示
+	PushY int
 }
 
 // World 是仿真状态。
@@ -47,6 +48,9 @@ func (o Options) validate() error {
 	if o.SubSteps <= 0 || o.SubSteps > 16 {
 		return fmt.Errorf("%w: SubSteps=%d", ErrBadOption, o.SubSteps)
 	}
+	if o.FrameDTQ16 < 0 {
+		return fmt.Errorf("%w: FrameDTQ16=%d", ErrBadOption, o.FrameDTQ16)
+	}
 	return nil
 }
 
@@ -55,7 +59,11 @@ func New(opt Options) (*World, error) {
 	if err := opt.validate(); err != nil {
 		return nil, err
 	}
-	return &World{opt: opt, state: sim.NewState(opt.Bodies, fixed.FromInt(opt.Gravity))}, nil
+	dt := fixed.FromRaw(opt.FrameDTQ16)
+	if opt.FrameDTQ16 == 0 {
+		dt = fixed.One
+	}
+	return &World{opt: opt, state: sim.NewStateWithDT(opt.Bodies, fixed.FromInt(opt.Gravity), dt)}, nil
 }
 
 // Tick 返回当前帧号。

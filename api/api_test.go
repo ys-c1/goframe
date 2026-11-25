@@ -23,15 +23,17 @@ func TestDeterministic(t *testing.T) {
 	}
 }
 
-func TestSubStepsAffectResult(t *testing.T) {
+func TestSubStepsAreConsistent(t *testing.T) {
 	a, _ := New(Options{Bodies: 2, SubSteps: 1, Gravity: 10})
 	b, _ := New(Options{Bodies: 2, SubSteps: 4, Gravity: 10})
 	for i := 0; i < 4; i++ {
 		a.Step(nil)
 		b.Step(nil)
 	}
-	if a.Hash() == b.Hash() {
-		t.Fatal("子步数不同却得到同一状态")
+	// 分量精确常加速度格式在 1/4 子步可精确表示时应得到同一状态；
+	// 旧实现只分摊重力、不缩放位移，才会让 SubSteps 改变结果。
+	if a.Hash() != b.Hash() {
+		t.Fatalf("子步数导致确定性状态不一致: %x vs %x", a.Hash(), b.Hash())
 	}
 }
 
