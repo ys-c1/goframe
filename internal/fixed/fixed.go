@@ -18,6 +18,9 @@ func (v Value) Raw() int32 { return int32(v) }
 // Add 定点加法。
 func (v Value) Add(o Value) Value { return v + o }
 
+// Sub 定点减法。
+func (v Value) Sub(o Value) Value { return v - o }
+
 // Mul 定点乘法，右移十六位，向零取整。
 func (v Value) Mul(o Value) Value {
 	return Value((int64(v) * int64(o)) >> 16)
