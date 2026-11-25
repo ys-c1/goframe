@@ -17,10 +17,35 @@ func main() {
 	switch os.Args[1] {
 	case "run":
 		os.Exit(run(os.Args[2:]))
+	case "audit":
+		os.Exit(audit(os.Args[2:]))
 	default:
 		fmt.Fprintln(os.Stderr, "unknown command")
 		os.Exit(2)
 	}
+}
+
+// audit 跑三组固定输入的去重审计并打印三栏留档表。
+func audit(args []string) int {
+	fs := flag.NewFlagSet("audit", flag.ContinueOnError)
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	results, err := api.RunAudit(api.AuditScenarios())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "audit failed:", err)
+		return 1
+	}
+	fmt.Print(api.FormatTable(results))
+	for _, r := range results {
+		fmt.Printf("%s: 原序=%016x 归并=%016x 丢弃=%016x 归并保留=%v 字段冲突=%v 丢量X=%d 丢量Y=%d 判定=%s\n",
+			r.Name, r.HashOrig, r.HashMerged, r.HashDropped, r.SnapEqual, r.HasConflict, r.LostX, r.LostY, r.Verdict)
+		for _, l := range r.Lost {
+			fmt.Printf("  组 tick=%d body=%d d=(%d,%d) count=%d 丢弃丢量=(%d,%d)\n",
+				l.Tick, l.Body, l.DX, l.DY, l.Count, l.LostX, l.LostY)
+		}
+	}
+	return 0
 }
 
 func run(args []string) int {
