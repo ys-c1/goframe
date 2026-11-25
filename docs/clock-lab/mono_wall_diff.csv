@@ -1,0 +1,10 @@
+rollback_frames,point,mono_ms,wall_ms,diff_ms,diff_frames
+1,before,1040,1040,0,0
+1,rollback,1050,1040,10,1
+1,after,1060,1050,10,1
+10,before,1040,1040,0,0
+10,rollback,1050,950,100,10
+10,after,1060,960,100,10
+100,before,1040,1040,0,0
+100,rollback,1050,50,1000,100
+100,after,1060,60,1000,100

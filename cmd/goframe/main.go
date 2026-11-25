@@ -11,14 +11,18 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: goframe run --frames N [--bodies N] [--substeps N] [--gravity N]")
+		fmt.Fprintln(os.Stderr, "usage: goframe <run|clocklab> [flags]")
+		fmt.Fprintln(os.Stderr, "  run      跑确定性帧同步并自检回放")
+		fmt.Fprintln(os.Stderr, "  clocklab 生成墙钟回拨 vs 单调钟自增帧号的对照实验产物")
 		os.Exit(2)
 	}
 	switch os.Args[1] {
 	case "run":
 		os.Exit(run(os.Args[2:]))
+	case "clocklab":
+		os.Exit(clockLab(os.Args[2:]))
 	default:
-		fmt.Fprintln(os.Stderr, "unknown command")
+		fmt.Fprintln(os.Stderr, "unknown command:", os.Args[1])
 		os.Exit(2)
 	}
 }

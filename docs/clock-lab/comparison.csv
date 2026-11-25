@@ -1,0 +1,4 @@
+rollback_frames,frame_before,frame_rollback_pre,frame_rollback_post,frame_after,backward_jump_frames,wall_cum_deviation_frames,fixed_cum_deviation_frames,fix_below_one_frame,catchup_debt_frames,catchup_fast_slots,clock_gap_before_ms,clock_gap_at_ms,clock_gap_after_ms,clock_gap_bound_ms,frame_gap_bound,frame_gap_bound_with_lag_strict,pass
+1,104,105,104,105,1,1,0,true,1,1,0,10,10,10,1,<2,true
+10,104,105,95,96,10,10,0,true,10,10,0,100,100,100,10,<11,true
+100,104,105,5,6,100,100,0,true,100,100,0,1000,1000,1000,100,<101,true

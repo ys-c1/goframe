@@ -1,0 +1,36 @@
+系统时钟回拨 × 帧号单调性实验报告（全部整数运算，可复算）
+帧周期 Δ=10ms（100Hz 定步长）；每条时间轴 120 槽，回拨点 rb=105；回拨幅度 R=1/10/100 帧，每档只回拨一次。
+
+一、三档对照：偏差与帧号变化（单位：帧 / 钟差：ms）
+R(帧)  F(rb-1)  F(rb^-)  F(rb^+)  F(rb+1)  回拨瞬间增量  墙钟D_wall  自增D_fixed  <1帧   追帧欠账  快进槽数  钟差三点(前/拨/后,ms)
+1     104      105      104      105      -1      1         0          true  1     1     0/10/10
+10    104      105      95       96       -10     10        0          true  10    10    0/100/100
+100   104      105      5        6        -100    100       0          true  100   100   0/1000/1000
+
+二、各档回拨前后墙钟帧号序列（注意 rb^- 与 rb^+ 两个同时刻点）
+R=  1 帧: ...,103,104,105,104,105,106,...  跌幅=1 帧；D_wall=ΣR_j=1；D_fixed=0
+R= 10 帧: ...,103,104,105,95,96,97,...  跌幅=10 帧；D_wall=ΣR_j=10；D_fixed=0
+R=100 帧: ...,103,104,105,5,6,7,...  跌幅=100 帧；D_wall=ΣR_j=100；D_fixed=0
+
+三、单调钟 − 墙钟 差值曲线（每档三个点：回拨前 / 回拨瞬间 / 回拨后）
+R=  1 帧: before(t=1040ms,d=0ms) -> rollback(t=1050ms,d=10ms) -> after(t=1060ms,d=10ms)；上界 0≤d≤10ms=RΔ
+R= 10 帧: before(t=1040ms,d=0ms) -> rollback(t=1050ms,d=100ms) -> after(t=1060ms,d=100ms)；上界 0≤d≤100ms=RΔ
+R=100 帧: before(t=1040ms,d=0ms) -> rollback(t=1050ms,d=1000ms) -> after(t=1060ms,d=1000ms)；上界 0≤d≤1000ms=RΔ
+
+四、上界
+  钟差: 0 ≤ m(t)-w(t) ≤ (Σ_j R_j)Δ，单次回拨 ≤ RΔ（10/100/1000ms）
+  帧号差(同相位): F_fixed-F_wall = 截至 t 的回拨累计 S(t)，故 ≤ ΣR_j（本实验=R）
+  帧号差(计入一帧内提交滞后): |差| < ΣR_j + 1
+  修复方案自身滞后: 0 ≤ m(t)-nΔ < Δ，即 lag/Δ ∈ [0,1)，严格低于一帧；累计回退 D_fixed=0
+
+五、验收（三档修复后累计偏差都必须 < 1 帧）
+  R=  1: 墙钟非单调=true, D_wall=1=R, D_fixed=0 (<1) -> PASS
+  R= 10: 墙钟非单调=true, D_wall=10=R, D_fixed=0 (<1) -> PASS
+  R=100: 墙钟非单调=true, D_wall=100=R, D_fixed=0 (<1) -> PASS
+  真实 api.World 对拍: 32 帧 × 4 组(基线+三档回拨), 指纹完全一致=true
+    no_rollback_baseline   hashes=32 last=8bac7df5e190c93f tick单调=true
+    rollback_r1            hashes=32 last=8bac7df5e190c93f tick单调=true
+    rollback_r10           hashes=32 last=8bac7df5e190c93f tick单调=true
+    rollback_r100          hashes=32 last=8bac7df5e190c93f tick单调=true
+
+总验收: PASS
