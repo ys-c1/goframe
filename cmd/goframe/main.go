@@ -11,12 +11,14 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: goframe run --frames N [--bodies N] [--substeps N] [--gravity N]")
+		fmt.Fprintln(os.Stderr, "usage: goframe run|clock [flags]")
 		os.Exit(2)
 	}
 	switch os.Args[1] {
 	case "run":
 		os.Exit(run(os.Args[2:]))
+	case "clock":
+		os.Exit(clockRun(os.Args[2:]))
 	default:
 		fmt.Fprintln(os.Stderr, "unknown command")
 		os.Exit(2)
