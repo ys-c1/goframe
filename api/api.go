@@ -12,17 +12,17 @@ import (
 
 // Options 是可配参数的唯一入口，新增参数必须加在这里并注明默认值。
 type Options struct {
-	Bodies   int  // 实体数，默认 8
-	SubSteps int  // 每帧子步数，默认 1
-	Gravity  int  // 重力，Q16.16 的整数值，默认 0
+	Bodies   int `json:"bodies"`   // 实体数，默认 8
+	SubSteps int `json:"substeps"` // 每帧子步数，默认 1
+	Gravity  int `json:"gravity"`  // 重力，Q16.16 的整数值，默认 0
 }
 
 // Command 是一帧内要执行的指令。
 type Command struct {
-	Tick   int // 生效帧号
-	Body   int // 目标实体
-	PushX  int // 冲量，Q16.16 整数表示
-	PushY  int
+	Tick  int `json:"tick"`  // 生效帧号
+	Body  int `json:"body"`  // 目标实体
+	PushX int `json:"pushX"` // 冲量，Q16.16 整数表示
+	PushY int `json:"pushY"`
 }
 
 // World 是仿真状态。

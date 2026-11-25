@@ -5,13 +5,13 @@ import "goframe/api"
 
 // Frame 是一帧的指令集合。
 type Frame struct {
-	Commands []api.Command
+	Commands []api.Command `json:"commands"`
 }
 
 // Log 是完整回放记录。
 type Log struct {
-	Options api.Options
-	Frames  []Frame
+	Options api.Options `json:"options"`
+	Frames  []Frame     `json:"frames"`
 }
 
 // Record 跑一遍并记录，返回日志与每帧指纹。
