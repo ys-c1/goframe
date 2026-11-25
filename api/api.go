@@ -12,17 +12,20 @@ import (
 
 // Options 是可配参数的唯一入口，新增参数必须加在这里并注明默认值。
 type Options struct {
-	Bodies   int  // 实体数，默认 8
-	SubSteps int  // 每帧子步数，默认 1
-	Gravity  int  // 重力，Q16.16 的整数值，默认 0
+	Bodies   int // 实体数，默认 8
+	SubSteps int // 每帧子步数，默认 1
+	Gravity  int // 重力，世界单位/帧²的整数部分，默认 0
+	// DragRaw 是每帧阻尼系数 k 的 Q16.16 原始表示，默认 0（无阻尼）。
+	// 用原始值而非浮点，保证 CLI、回放与测试拿到的是同一个整数 k。
+	DragRaw int32
 }
 
 // Command 是一帧内要执行的指令。
 type Command struct {
-	Tick   int // 生效帧号
-	Body   int // 目标实体
-	PushX  int // 冲量，Q16.16 整数表示
-	PushY  int
+	Tick  int // 生效帧号
+	Body  int // 目标实体
+	PushX int // 冲量，Q16.16 整数表示
+	PushY int
 }
 
 // World 是仿真状态。
@@ -47,6 +50,10 @@ func (o Options) validate() error {
 	if o.SubSteps <= 0 || o.SubSteps > 16 {
 		return fmt.Errorf("%w: SubSteps=%d", ErrBadOption, o.SubSteps)
 	}
+	// 阻尼系数须落在 [0, One]：负阻尼会放大速度，>1 会反向，均非物理。
+	if o.DragRaw < 0 || o.DragRaw > int32(fixed.One) {
+		return fmt.Errorf("%w: DragRaw=%d 须在 [0,%d]", ErrBadOption, o.DragRaw, fixed.One)
+	}
 	return nil
 }
 
@@ -55,7 +62,9 @@ func New(opt Options) (*World, error) {
 	if err := opt.validate(); err != nil {
 		return nil, err
 	}
-	return &World{opt: opt, state: sim.NewState(opt.Bodies, fixed.FromInt(opt.Gravity))}, nil
+	st := sim.NewState(opt.Bodies, fixed.FromInt(opt.Gravity))
+	st.SetDrag(fixed.FromRaw(int(opt.DragRaw)))
+	return &World{opt: opt, state: st}, nil
 }
 
 // Tick 返回当前帧号。

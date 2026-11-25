@@ -11,7 +11,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: goframe run --frames N [--bodies N] [--substeps N] [--gravity N]")
+		fmt.Fprintln(os.Stderr, "usage: goframe run --frames N [--bodies N] [--substeps N] [--gravity N] [--drag RAW]")
 		os.Exit(2)
 	}
 	switch os.Args[1] {
@@ -29,10 +29,11 @@ func run(args []string) int {
 	bodies := fs.Int("bodies", 8, "实体数")
 	sub := fs.Int("substeps", 1, "子步数")
 	grav := fs.Int("gravity", 0, "重力")
+	drag := fs.Int("drag", 0, "每帧阻尼系数 k 的 Q16.16 原始值，0 为无阻尼")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	opt := api.Options{Bodies: *bodies, SubSteps: *sub, Gravity: *grav}
+	opt := api.Options{Bodies: *bodies, SubSteps: *sub, Gravity: *grav, DragRaw: int32(*drag)}
 	fs2 := make([]replay.Frame, *frames)
 	for i := range fs2 {
 		fs2[i] = replay.Frame{Commands: []api.Command{{Tick: i, Body: i % *bodies, PushX: 1 << 14}}}
