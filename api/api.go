@@ -4,6 +4,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"goframe/internal/fixed"
 	"goframe/internal/hash"
@@ -12,17 +13,26 @@ import (
 
 // Options 是可配参数的唯一入口，新增参数必须加在这里并注明默认值。
 type Options struct {
-	Bodies   int  // 实体数，默认 8
-	SubSteps int  // 每帧子步数，默认 1
-	Gravity  int  // 重力，Q16.16 的整数值，默认 0
+	Bodies   int // 实体数，默认 8
+	SubSteps int // 每帧子步数，默认 1
+	Gravity  int // 重力，Q16.16 的整数值，默认 0
 }
 
 // Command 是一帧内要执行的指令。
 type Command struct {
-	Tick   int // 生效帧号
-	Body   int // 目标实体
-	PushX  int // 冲量，Q16.16 整数表示
-	PushY  int
+	Tick  int // 生效帧号
+	Body  int // 目标实体
+	PushX int // 冲量，Q16.16 整数表示
+	PushY int
+}
+
+// Interaction 是一帧内的实体间交互：冲量由源实体的当前速度决定，写入目标实体。
+type Interaction struct {
+	Tick int // 生效帧号
+	Src  int // 冲量读取的实体编号
+	Dst  int // 冲量写入的实体编号
+	Gain int // 耦合系数，Q16.16 整数表示
+	Base int // 常量冲量部分，Q16.16 整数表示
 }
 
 // World 是仿真状态。
@@ -63,12 +73,46 @@ func (w *World) Tick() int { return w.tick }
 
 // Step 推进一帧，cmds 是本帧要执行的指令。
 func (w *World) Step(cmds []Command) error {
+	return w.StepWith(cmds, nil)
+}
+
+// StepWith 推进一帧，先按实体编号规范化指令与交互再执行：
+// 同一组输入无论调用方按什么顺序传入，产生的写入序列完全一致。
+func (w *World) StepWith(cmds []Command, inter []Interaction) error {
 	for _, c := range cmds {
 		if c.Body < 0 || c.Body >= w.opt.Bodies {
 			return fmt.Errorf("%w: Body=%d", ErrBadBody, c.Body)
 		}
+	}
+	for _, it := range inter {
+		if it.Src < 0 || it.Src >= w.opt.Bodies || it.Dst < 0 || it.Dst >= w.opt.Bodies {
+			return fmt.Errorf("%w: Src=%d Dst=%d", ErrBadBody, it.Src, it.Dst)
+		}
+	}
+	orderedCmds := append([]Command(nil), cmds...)
+	sort.SliceStable(orderedCmds, func(a, b int) bool {
+		ca, cb := orderedCmds[a], orderedCmds[b]
+		if ca.Body != cb.Body {
+			return ca.Body < cb.Body
+		}
+		if ca.PushX != cb.PushX {
+			return ca.PushX < cb.PushX
+		}
+		return ca.PushY < cb.PushY
+	})
+	for _, c := range orderedCmds {
 		w.state.Push(c.Body, fixed.FromRaw(c.PushX), fixed.FromRaw(c.PushY))
 	}
+	shoves := make([]sim.Shove, len(inter))
+	for i, it := range inter {
+		shoves[i] = sim.Shove{
+			Src:  it.Src,
+			Dst:  it.Dst,
+			Gain: fixed.FromRaw(it.Gain),
+			Base: fixed.FromRaw(it.Base),
+		}
+	}
+	w.state.ApplyShovesCanonical(shoves)
 	for i := 0; i < w.opt.SubSteps; i++ {
 		w.state.Integrate(w.opt.SubSteps)
 	}

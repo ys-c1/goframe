@@ -5,7 +5,8 @@ import "goframe/api"
 
 // Frame 是一帧的指令集合。
 type Frame struct {
-	Commands []api.Command
+	Commands     []api.Command
+	Interactions []api.Interaction
 }
 
 // Log 是完整回放记录。
@@ -22,7 +23,7 @@ func Record(opt api.Options, frames []Frame) (Log, []uint64, error) {
 	}
 	hashes := make([]uint64, 0, len(frames))
 	for _, f := range frames {
-		if err := w.Step(f.Commands); err != nil {
+		if err := w.StepWith(f.Commands, f.Interactions); err != nil {
 			return Log{}, nil, err
 		}
 		hashes = append(hashes, w.Hash())
