@@ -24,9 +24,49 @@ func (v Value) Mul(o Value) Value {
 }
 
 // Div 定点除法，被零除返回零，结果向零取整。
+//
+// 注意：除数经过零时输出在零处不连续，且小除数产生的大商会截断为 int32，
+// 新代码应优先使用 SatDiv。保留 Div 仅为兼容既有确定性轨迹。
 func (v Value) Div(o Value) Value {
 	if o == 0 {
 		return 0
 	}
 	return Value((int64(v) << 16) / int64(o))
+}
+
+// SatDiv 是带符号的饱和除法，结果向零取整，并夹在 [-sat, +sat]。
+// sat 必须为正数，由调用方按物理包络给出（见 docs/division-saturation.md）。
+//
+// 符号处理约定：
+//   - 普通除法在 int64 域完成，商的符号由被除数与除数异号决定（Go 向零取整），
+//     最后才收窄为 int32，避免先截断导致符号翻转后再夹到错误的一侧；
+//   - 除数为零时不返回零（零会在过零处制造不连续），而是取被除数的符号：
+//     被除数非负返回 +sat，为负返回 -sat，被除数本身为零返回 0。
+func (v Value) SatDiv(o Value, sat Value) Value {
+	if sat <= 0 {
+		return 0
+	}
+	var q int64
+	switch {
+	case o == 0:
+		if v == 0 {
+			return 0
+		}
+		if v > 0 {
+			return sat
+		}
+		return -sat
+	case v == 0:
+		return 0
+	default:
+		q = (int64(v) << 16) / int64(o)
+	}
+	s := int64(sat)
+	if q > s {
+		return sat
+	}
+	if q < -s {
+		return -sat
+	}
+	return Value(q)
 }
