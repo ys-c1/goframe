@@ -44,3 +44,52 @@ func TestRejects(t *testing.T) {
 		t.Fatal("实体越界应报错")
 	}
 }
+
+func TestPerturbIsDeterministicAndActive(t *testing.T) {
+	opt := Options{Bodies: 8, SubSteps: 2, Gravity: 3, Seed: 20261126, PerturbAmp: 1 << 14}
+
+	run := func() []uint64 {
+		w, err := New(opt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		hs := make([]uint64, 16)
+		for i := range hs {
+			if err := w.Step(nil); err != nil {
+				t.Fatal(err)
+			}
+			hs[i] = w.Hash()
+		}
+		return hs
+	}
+
+	a, b := run(), run()
+	for i := range a {
+		if a[i] != b[i] {
+			t.Fatalf("同种子两次运行在 tick=%d 指纹不同", i)
+		}
+	}
+
+	// 扰动必须真的改变状态：与关闭扰动的世界至少有一帧指纹不同。
+	off := opt
+	off.PerturbAmp = 0
+	w0, _ := New(off)
+	changed := false
+	for i := 0; i < 16; i++ {
+		if err := w0.Step(nil); err != nil {
+			t.Fatal(err)
+		}
+		if w0.Hash() != a[i] {
+			changed = true
+		}
+	}
+	if !changed {
+		t.Fatal("开启 PerturbAmp 后状态没有任何变化")
+	}
+}
+
+func TestPerturbRejectsNegativeAmp(t *testing.T) {
+	if _, err := New(Options{Bodies: 1, SubSteps: 1, PerturbAmp: -1}); err == nil {
+		t.Fatal("负扰动幅度应报错")
+	}
+}

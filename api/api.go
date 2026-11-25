@@ -7,22 +7,31 @@ import (
 
 	"goframe/internal/fixed"
 	"goframe/internal/hash"
+	"goframe/internal/rng"
 	"goframe/internal/sim"
 )
 
 // Options 是可配参数的唯一入口，新增参数必须加在这里并注明默认值。
 type Options struct {
-	Bodies   int  // 实体数，默认 8
-	SubSteps int  // 每帧子步数，默认 1
-	Gravity  int  // 重力，Q16.16 的整数值，默认 0
+	Bodies   int // 实体数，默认 8
+	SubSteps int // 每帧子步数，默认 1
+	Gravity  int // 重力，Q16.16 的整数值，默认 0
+
+	// Seed 是随机扰动的主种子，必须固定并随 replay.Log.Options 一起记录，
+	// 否则回放无法复现扰动。默认 0（仅在 PerturbAmp>0 时相关）。
+	Seed int64
+	// PerturbAmp 是每帧施加给每个实体的随机速度扰动幅度，Q16.16 原始单位，
+	// 扰动落在 [-PerturbAmp, PerturbAmp]。默认 0 表示关闭，状态与旧版逐字节一致。
+	// 扰动按 (Seed, 实体编号, 轴, 帧号) 派生，与调用次序无关。
+	PerturbAmp int
 }
 
 // Command 是一帧内要执行的指令。
 type Command struct {
-	Tick   int // 生效帧号
-	Body   int // 目标实体
-	PushX  int // 冲量，Q16.16 整数表示
-	PushY  int
+	Tick  int // 生效帧号
+	Body  int // 目标实体
+	PushX int // 冲量，Q16.16 整数表示
+	PushY int
 }
 
 // World 是仿真状态。
@@ -47,6 +56,12 @@ func (o Options) validate() error {
 	if o.SubSteps <= 0 || o.SubSteps > 16 {
 		return fmt.Errorf("%w: SubSteps=%d", ErrBadOption, o.SubSteps)
 	}
+	if o.PerturbAmp < 0 {
+		return fmt.Errorf("%w: PerturbAmp=%d", ErrBadOption, o.PerturbAmp)
+	}
+	if o.PerturbAmp > 1<<30 {
+		return fmt.Errorf("%w: PerturbAmp=%d 过大", ErrBadOption, o.PerturbAmp)
+	}
 	return nil
 }
 
@@ -68,6 +83,18 @@ func (w *World) Step(cmds []Command) error {
 			return fmt.Errorf("%w: Body=%d", ErrBadBody, c.Body)
 		}
 		w.state.Push(c.Body, fixed.FromRaw(c.PushX), fixed.FromRaw(c.PushY))
+	}
+	if w.opt.PerturbAmp > 0 {
+		amp := int32(w.opt.PerturbAmp)
+		seed := uint64(w.opt.Seed)
+		tick := uint64(w.tick)
+		for i := 0; i < w.opt.Bodies; i++ {
+			// 每个实体、每轴、每帧独立派生， draws 之间没有共享游标，
+			// 因此新增/跳过任何实体的调用都不会平移其他实体。
+			jx := rng.Jitter(seed, i, rng.TagJitterX, tick, amp)
+			jy := rng.Jitter(seed, i, rng.TagJitterY, tick, amp)
+			w.state.Push(i, jx, jy)
+		}
 	}
 	for i := 0; i < w.opt.SubSteps; i++ {
 		w.state.Integrate(w.opt.SubSteps)

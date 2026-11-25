@@ -11,7 +11,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: goframe run --frames N [--bodies N] [--substeps N] [--gravity N]")
+		fmt.Fprintln(os.Stderr, "usage: goframe run --frames N [--bodies N] [--substeps N] [--gravity N] [--perturb AMP] [--seed S]")
 		os.Exit(2)
 	}
 	switch os.Args[1] {
@@ -29,10 +29,15 @@ func run(args []string) int {
 	bodies := fs.Int("bodies", 8, "实体数")
 	sub := fs.Int("substeps", 1, "子步数")
 	grav := fs.Int("gravity", 0, "重力")
+	perturb := fs.Int("perturb", 0, "每帧随机速度扰动幅度（Q16.16 原始单位），0 关闭")
+	seed := fs.Int64("seed", 20261126, "扰动主种子，随回放参数一起记录")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	opt := api.Options{Bodies: *bodies, SubSteps: *sub, Gravity: *grav}
+	opt := api.Options{
+		Bodies: *bodies, SubSteps: *sub, Gravity: *grav,
+		Seed: *seed, PerturbAmp: *perturb,
+	}
 	fs2 := make([]replay.Frame, *frames)
 	for i := range fs2 {
 		fs2[i] = replay.Frame{Commands: []api.Command{{Tick: i, Body: i % *bodies, PushX: 1 << 14}}}
