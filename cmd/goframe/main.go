@@ -17,8 +17,10 @@ func main() {
 	switch os.Args[1] {
 	case "run":
 		os.Exit(run(os.Args[2:]))
+	case "quant":
+		os.Exit(runQuant(os.Args[2:]))
 	default:
-		fmt.Fprintln(os.Stderr, "unknown command")
+		fmt.Fprintln(os.Stderr, "unknown command (want run|quant)")
 		os.Exit(2)
 	}
 }

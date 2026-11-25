@@ -12,17 +12,21 @@ import (
 
 // Options 是可配参数的唯一入口，新增参数必须加在这里并注明默认值。
 type Options struct {
-	Bodies   int  // 实体数，默认 8
-	SubSteps int  // 每帧子步数，默认 1
-	Gravity  int  // 重力，Q16.16 的整数值，默认 0
+	Bodies   int // 实体数，默认 8
+	SubSteps int // 每帧子步数，默认 1
+	Gravity  int // 重力，Q16.16 的整数值，默认 0
+
+	// QuantizeBits 大于 0 且小于 16 时，Step 先把每条指令冲量舍入到
+	// 2^-QuantizeBits 定点位网格再积分；0 或 16 表示全精度/不量化，默认 0。
+	QuantizeBits int
 }
 
 // Command 是一帧内要执行的指令。
 type Command struct {
-	Tick   int // 生效帧号
-	Body   int // 目标实体
-	PushX  int // 冲量，Q16.16 整数表示
-	PushY  int
+	Tick  int // 生效帧号
+	Body  int // 目标实体
+	PushX int // 冲量，Q16.16 整数表示
+	PushY int
 }
 
 // World 是仿真状态。
@@ -47,6 +51,9 @@ func (o Options) validate() error {
 	if o.SubSteps <= 0 || o.SubSteps > 16 {
 		return fmt.Errorf("%w: SubSteps=%d", ErrBadOption, o.SubSteps)
 	}
+	if o.QuantizeBits < 0 || o.QuantizeBits > fixed.MaxFracBits {
+		return fmt.Errorf("%w: QuantizeBits=%d", ErrBadOption, o.QuantizeBits)
+	}
 	return nil
 }
 
@@ -63,11 +70,17 @@ func (w *World) Tick() int { return w.tick }
 
 // Step 推进一帧，cmds 是本帧要执行的指令。
 func (w *World) Step(cmds []Command) error {
+	qbits := w.opt.QuantizeBits
 	for _, c := range cmds {
 		if c.Body < 0 || c.Body >= w.opt.Bodies {
 			return fmt.Errorf("%w: Body=%d", ErrBadBody, c.Body)
 		}
-		w.state.Push(c.Body, fixed.FromRaw(c.PushX), fixed.FromRaw(c.PushY))
+		px, py := fixed.FromRaw(c.PushX), fixed.FromRaw(c.PushY)
+		if qbits > 0 && qbits < fixed.MaxFracBits {
+			px = fixed.QuantizeToFracBits(px, qbits)
+			py = fixed.QuantizeToFracBits(py, qbits)
+		}
+		w.state.Push(c.Body, px, py)
 	}
 	for i := 0; i < w.opt.SubSteps; i++ {
 		w.state.Integrate(w.opt.SubSteps)
