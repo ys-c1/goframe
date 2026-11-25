@@ -12,15 +12,27 @@ import (
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "usage: goframe run --frames N [--bodies N] [--substeps N] [--gravity N]")
+		fmt.Fprintln(os.Stderr, "       goframe drop-exp [--out DIR]")
 		os.Exit(2)
 	}
 	switch os.Args[1] {
 	case "run":
 		os.Exit(run(os.Args[2:]))
+	case "drop-exp":
+		os.Exit(dropExpCmd(os.Args[2:]))
 	default:
 		fmt.Fprintln(os.Stderr, "unknown command")
 		os.Exit(2)
 	}
+}
+
+func dropExpCmd(args []string) int {
+	fs := flag.NewFlagSet("drop-exp", flag.ContinueOnError)
+	out := fs.String("out", "artifacts/drop", "输出目录（报告与哈希序列）")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	return dropExperiment(*out)
 }
 
 func run(args []string) int {
