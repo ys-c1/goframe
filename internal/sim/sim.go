@@ -1,7 +1,11 @@
 // Package sim 是确定性积分内核，只做加法与定点乘法。
 package sim
 
-import "goframe/internal/fixed"
+import (
+	"fmt"
+
+	"goframe/internal/fixed"
+)
 
 // State 是所有实体的位置与速度，按固定顺序存放，便于逐字节比较。
 type State struct {
@@ -23,6 +27,30 @@ func NewState(n int, gravity fixed.Value) *State {
 
 // Len 返回实体数。
 func (s *State) Len() int { return len(s.posX) }
+
+// FromSlices 按固定顺序的原始定点值构造状态，长度不整除 4 时返回错误。
+// 入参顺序必须与 Raw 一致：每实体依次 posX,posY,velX,velY；gravity 取原始定点值。
+// 供对拍/指纹测试精确构造两个仅高位不同的状态，生产路径仍走 Push/Integrate。
+func FromSlices(raw []int32, gravityRaw int32) (*State, error) {
+	if len(raw)%4 != 0 {
+		return nil, fmt.Errorf("字段数 %d 不是 4 的倍数", len(raw))
+	}
+	n := len(raw) / 4
+	s := &State{
+		posX:    make([]fixed.Value, n),
+		posY:    make([]fixed.Value, n),
+		velX:    make([]fixed.Value, n),
+		velY:    make([]fixed.Value, n),
+		gravity: fixed.FromRaw(int(gravityRaw)),
+	}
+	for i := 0; i < n; i++ {
+		s.posX[i] = fixed.FromRaw(int(raw[4*i+0]))
+		s.posY[i] = fixed.FromRaw(int(raw[4*i+1]))
+		s.velX[i] = fixed.FromRaw(int(raw[4*i+2]))
+		s.velY[i] = fixed.FromRaw(int(raw[4*i+3]))
+	}
+	return s, nil
+}
 
 // Push 给实体施加冲量。
 func (s *State) Push(i int, dx, dy fixed.Value) {

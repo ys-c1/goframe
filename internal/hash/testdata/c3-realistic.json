@@ -1,0 +1,20 @@
+{
+  "construction": "c3-realistic",
+  "reason": "带重力的实际量：posX=1.0(0x00010000) 高位翻转，低位 0x0000 保持一致",
+  "tick": 7,
+  "gravity_raw": 131072,
+  "state_a_raw": [
+    65536,
+    0,
+    3,
+    0
+  ],
+  "state_b_raw": [
+    -65536,
+    0,
+    3,
+    0
+  ],
+  "low16_bits_equal": true,
+  "raw_different": true
+}

@@ -1,0 +1,20 @@
+{
+  "construction": "c1-single-field",
+  "reason": "单实体，仅 velX 高位不同：0x00000001 vs 0xFFFF0001，低 16 位都是 0x0001",
+  "tick": 1,
+  "gravity_raw": 0,
+  "state_a_raw": [
+    0,
+    0,
+    1,
+    0
+  ],
+  "state_b_raw": [
+    0,
+    0,
+    -65535,
+    0
+  ],
+  "low16_bits_equal": true,
+  "raw_different": true
+}

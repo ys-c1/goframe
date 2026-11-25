@@ -1,0 +1,28 @@
+{
+  "construction": "c2-multi-field",
+  "reason": "双实体，velX 与 posY 两个字段高位不同；低 16 位分别保持 0x0001 / 0x0002",
+  "tick": 1,
+  "gravity_raw": 0,
+  "state_a_raw": [
+    0,
+    0,
+    1,
+    0,
+    0,
+    2,
+    0,
+    0
+  ],
+  "state_b_raw": [
+    0,
+    0,
+    -65535,
+    0,
+    0,
+    -65534,
+    0,
+    0
+  ],
+  "low16_bits_equal": true,
+  "raw_different": true
+}
