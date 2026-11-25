@@ -13,3 +13,16 @@
 make test
 go run ./cmd/goframe run --frames 20 --bodies 8 --substeps 4 --gravity 2
 ```
+
+## 重力余数补偿与冲量守恒
+
+重力按子步分摊时，整除余数不能丢。`sim.GravitySchedule` 用欧几里得分解
+`G = q·S + ρ`，把 `ρ` 拆成 `ρ` 个 `q+1`，使每帧 `S` 个子步的重力冲量之和
+**逐帧严格等于设定值 `G`**（不是只在末帧对上）。完整证明、跨帧余数台账的
+误差界、三档子步数（3/5/7）×1000 帧的逐帧零差值证据，以及两档帧数
+（100/1000）的哈希，见 `artifacts/impulse/REMAINDER_PROOF.md`。
+
+```
+make lab     # 重新生成 artifacts/impulse/* 与 artifacts/hashes_F*.txt
+```
+
