@@ -17,10 +17,25 @@ func main() {
 	switch os.Args[1] {
 	case "run":
 		os.Exit(run(os.Args[2:]))
+	case "snap":
+		os.Exit(snapCmd(os.Args[2:]))
 	default:
 		fmt.Fprintln(os.Stderr, "unknown command")
 		os.Exit(2)
 	}
+}
+
+func snapCmd(args []string) int {
+	fs := flag.NewFlagSet("snap", flag.ContinueOnError)
+	out := fs.String("out", "artifacts/snapshots", "快照输出目录")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if err := os.MkdirAll(*out, 0o755); err != nil {
+		fmt.Fprintln(os.Stderr, "mkdir:", err)
+		return 1
+	}
+	return snap(fs.Args(), *out)
 }
 
 func run(args []string) int {
