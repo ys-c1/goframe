@@ -11,14 +11,21 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: goframe run --frames N [--bodies N] [--substeps N] [--gravity N]")
+		fmt.Fprintln(os.Stderr, "usage: goframe <run|drift|verify> [flags]")
+		fmt.Fprintln(os.Stderr, "  run     --frames N [--bodies N] [--substeps N] [--gravity N]")
+		fmt.Fprintln(os.Stderr, "  drift   [--out artifacts]")
+		fmt.Fprintln(os.Stderr, "  verify  [--out artifacts]")
 		os.Exit(2)
 	}
 	switch os.Args[1] {
 	case "run":
 		os.Exit(run(os.Args[2:]))
+	case "drift":
+		os.Exit(driftCmd(os.Args[2:]))
+	case "verify":
+		os.Exit(verifyCmd(os.Args[2:]))
 	default:
-		fmt.Fprintln(os.Stderr, "unknown command")
+		fmt.Fprintln(os.Stderr, "unknown command (want run|drift|verify)")
 		os.Exit(2)
 	}
 }
