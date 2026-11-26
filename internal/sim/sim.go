@@ -1,7 +1,25 @@
 // Package sim 是确定性积分内核，只做加法与定点乘法。
 package sim
 
-import "goframe/internal/fixed"
+import (
+	"errors"
+	"fmt"
+
+	"goframe/internal/fixed"
+)
+
+// ErrFieldID 表示字段编号或切片长度不合法。
+var ErrFieldID = errors.New("字段编号非法")
+
+// ErrFieldIDOutOfRange 构造编号越界错误。
+func ErrFieldIDOutOfRange(id, n int) error {
+	return fmt.Errorf("%w: id=%d, 字段总数=%d", ErrFieldID, id, n)
+}
+
+// ErrRawLengthMismatch 构造 Raw 长度不一致错误。
+func ErrRawLengthMismatch(got, want int) error {
+	return fmt.Errorf("%w: Raw 长度=%d, 应为 %d", ErrFieldID, got, want)
+}
 
 // State 是所有实体的位置与速度，按固定顺序存放，便于逐字节比较。
 type State struct {
@@ -47,4 +65,42 @@ func (s *State) Raw() []int32 {
 		out = append(out, s.posX[i].Raw(), s.posY[i].Raw(), s.velX[i].Raw(), s.velY[i].Raw())
 	}
 	return out
+}
+
+// ScalarCount 返回 Raw 顺序下的标量字段总数（每实体 4 个）。
+func (s *State) ScalarCount() int { return 4 * len(s.posX) }
+
+// SetScalar 按 Raw 的固定顺序设置第 id 个标量字段的原始定点值。
+// 编号约定：id=4*i+k，k=0/1/2/3 分别对应 posX/posY/velX/velY。
+// 差分回滚只回写差分条目中出现的编号，走的就是这个入口。
+func (s *State) SetScalar(id int, raw int32) error {
+	if id < 0 || id >= 4*len(s.posX) {
+		return ErrFieldIDOutOfRange(id, 4*len(s.posX))
+	}
+	i, k := id/4, id%4
+	v := fixed.FromRaw(int(raw))
+	switch k {
+	case 0:
+		s.posX[i] = v
+	case 1:
+		s.posY[i] = v
+	case 2:
+		s.velX[i] = v
+	default:
+		s.velY[i] = v
+	}
+	return nil
+}
+
+// SetRaw 按 Raw 顺序整体写回，长度必须与 ScalarCount 一致。
+func (s *State) SetRaw(vals []int32) error {
+	if len(vals) != 4*len(s.posX) {
+		return ErrRawLengthMismatch(len(vals), 4*len(s.posX))
+	}
+	for id, v := range vals {
+		if err := s.SetScalar(id, v); err != nil {
+			return err
+		}
+	}
+	return nil
 }
