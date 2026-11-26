@@ -81,3 +81,44 @@ func (w *World) Hash() uint64 { return hash.State(w.tick, w.state) }
 
 // Snapshot 返回可比较的状态切片，便于逐字节对比。
 func (w *World) Snapshot() []int32 { return w.state.Raw() }
+
+// StateSnap 是一帧的可恢复快照：帧号加全部实体数值。
+type StateSnap struct {
+	Tick int
+	Raw  []int32
+}
+
+// SaveState 保存当前帧的深拷贝快照，供回滚引擎入环。
+func (w *World) SaveState() StateSnap {
+	return StateSnap{Tick: w.tick, Raw: w.state.Raw()}
+}
+
+// RestoreState 恢复到指定帧快照。帧号或切片长度不匹配返回错误，
+// 保证恢复后 Hash 与该帧首次推进时完全一致。
+func (w *World) RestoreState(s StateSnap) error {
+	if s.Tick < 0 || len(s.Raw) != 4*w.opt.Bodies {
+		return fmt.Errorf("%w: tick=%d rawLen=%d", ErrBadOption, s.Tick, len(s.Raw))
+	}
+	w.state.Load(s.Raw)
+	w.tick = s.Tick
+	return nil
+}
+
+// ApplyCommands 只施加指令不推进帧号，回滚重放时逐帧使用。
+func (w *World) ApplyCommands(cmds []Command) error {
+	for _, c := range cmds {
+		if c.Body < 0 || c.Body >= w.opt.Bodies {
+			return fmt.Errorf("%w: Body=%d", ErrBadBody, c.Body)
+		}
+		w.state.Push(c.Body, fixed.FromRaw(c.PushX), fixed.FromRaw(c.PushY))
+	}
+	return nil
+}
+
+// IntegrateFrame 只做一帧的子步积分并递增帧号，与 Step 的积分段完全一致。
+func (w *World) IntegrateFrame() {
+	for i := 0; i < w.opt.SubSteps; i++ {
+		w.state.Integrate(w.opt.SubSteps)
+	}
+	w.tick++
+}

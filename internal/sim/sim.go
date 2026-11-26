@@ -40,6 +40,31 @@ func (s *State) Integrate(sub int) {
 	}
 }
 
+// Clone 返回状态的深拷贝，回滚引擎用它保存帧快照。
+func (s *State) Clone() *State {
+	cp := &State{gravity: s.gravity}
+	cp.posX = append(cp.posX, s.posX...)
+	cp.posY = append(cp.posY, s.posY...)
+	cp.velX = append(cp.velX, s.velX...)
+	cp.velY = append(cp.velY, s.velY...)
+	return cp
+}
+
+// Load 用 Raw 导出的顺序写回全部数值，用于回滚恢复。
+// 长度不匹配时直接返回，不做部分写入。
+func (s *State) Load(raw []int32) {
+	n := len(s.posX)
+	if len(raw) != 4*n {
+		return
+	}
+	for i := 0; i < n; i++ {
+		s.posX[i] = fixed.FromRaw(int(raw[4*i]))
+		s.posY[i] = fixed.FromRaw(int(raw[4*i+1]))
+		s.velX[i] = fixed.FromRaw(int(raw[4*i+2]))
+		s.velY[i] = fixed.FromRaw(int(raw[4*i+3]))
+	}
+}
+
 // Raw 按固定顺序导出全部数值，便于逐字节比较。
 func (s *State) Raw() []int32 {
 	out := make([]int32, 0, 4*len(s.posX))
